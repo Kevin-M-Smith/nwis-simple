@@ -1,3 +1,4 @@
+#!/usr/bin/Rscript
 setupCluster <- function(){
   cl <- makePSOCKcluster(detectCores(), outfile = "")
   registerDoParallel(cl)
@@ -25,20 +26,31 @@ getDay <- function(sites, date, params, offset){
   cat(paste("Building Table ::", date))
   cat(paste("Downloading data from",
             nrow(sites), "sites...\n"))
+
+  map <- unlist(lapply(sites, as.character))
+  map <- split(map, ceiling(seq_along(map)/100))
   
-  pb <- txtProgressBar(min = 1, max = nrow(sites)+1, style = 3)
+  pb <- txtProgressBar(min = 1, max = length(map)+1, style = 3)
   
   cc <- foreach(i = 1) %dopar% { 
-    download(site = sites[i,1],  
+    setTxtProgressBar(pb, i)
+    send <- paste(map[[i]], collapse=',')
+
+	download(site = send,  
            params = params,
            date = date,
            offset = offset)
   }
-  
+ 
+  cc <- dbGetQuery(con, paste(
+	"ALTER TABLE",  date, "SET (autovacuum_enabled = false);")
+
   cc <- foreach(i = 2:nrow(sites)) %dopar% { 
     setTxtProgressBar(pb, i)
+    
+    send <- paste(map[[i]], collapse=',')
     result = tryCatch({
-      download(site = sites[i,1],
+      download(site = send,
                 params = params,
                 date = date,
                 offset = offset,
@@ -64,6 +76,12 @@ daysAgo<- function(x){
   return(format(Sys.Date() - x, "%Y-%m-%d"))
 }
 
+require(RPostgreSQL)
+require(RCurl)
+require(XML)
+require(doParallel)
+require(yaml)
+
 drv <- dbDriver("PostgreSQL")
 con <- dbConnect(drv, dbname = "postgres", user="postgres", host="localhost", password="usgs")
 sites <- dbGetQuery(con, "SELECT site_no from activesites;")
@@ -72,11 +90,9 @@ full <- lapply(1:35, daysAgo)
 
 config <- yaml.load_file("config.yaml")
 
-require(RPostgreSQL)
-require(RCurl)
-require(XML)
-require(doParallel)
-require(yaml)
+
+
+
 setupCluster()
 
 
