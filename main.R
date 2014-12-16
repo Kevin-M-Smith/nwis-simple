@@ -15,15 +15,17 @@ setupCluster <- function(){
 
 closeCluster <- function(){
   cc <- clusterEvalQ(cl, {
+    print(System.time())
     dbDisconnect(con2)
     dbUnloadDriver(drv2)
   })
   cc <- stopCluster(cl)
 }
 
+
 getDay <- function(sites, date, params, offset){
   cat("===========================================\n")
-  cat(paste("Building Table ::", date))
+  cat(paste("Building Table ::", date, "\n"))
   cat(paste("Downloading data from",
             nrow(sites), "sites...\n"))
 
@@ -32,6 +34,8 @@ getDay <- function(sites, date, params, offset){
   
   pb <- txtProgressBar(min = 1, max = length(map)+1, style = 3)
   
+  print(paste("Map size: ", length(map)));
+
   cc <- foreach(i = 1) %dopar% { 
     setTxtProgressBar(pb, i)
     send <- paste(map[[i]], collapse=',')
@@ -43,9 +47,9 @@ getDay <- function(sites, date, params, offset){
   }
  
   cc <- dbGetQuery(con, paste(
-	"ALTER TABLE",  date, "SET (autovacuum_enabled = false);")
+	"ALTER TABLE \"",  date, "\" SET (autovacuum_enabled = false);", sep = ""))
 
-  cc <- foreach(i = 2:nrow(sites)) %dopar% { 
+  cc <- foreach(i = 2:length(map)) %dopar% { 
     setTxtProgressBar(pb, i)
     
     send <- paste(map[[i]], collapse=',')
@@ -90,19 +94,15 @@ full <- lapply(1:35, daysAgo)
 
 config <- yaml.load_file("config.yaml")
 
-
-
-
 setupCluster()
 
+yesterday = daysAgo(10)
 
 getDay(sites = sites, 
-       date = daysAgo(1), 
+       date = yesterday, 
        params = config$collections$params,
        offset = config$midnight.offset.standard)
 
+source("netcdf4.2.R")
 
-
-
-
-
+build.ncdf(yesterday)

@@ -1,4 +1,14 @@
-build.ncdf <- function(startDate, endDate){
+require(RPostgreSQL)
+require(doParallel)
+require(plyr)
+require(reshape2)
+require(lubridate)
+require(ncdf4)
+require(data.table)
+drv2 <- dbDriver("PostgreSQL")
+con2 <- dbConnect(drv2, dbname = "postgres", user = "postgres", host = "localhost", password = "usgs")
+
+build.ncdf <- function(date){
   
   debugMode = FALSE;
   
@@ -9,19 +19,16 @@ build.ncdf <- function(startDate, endDate){
     sec <- as.numeric(difftime(time1, time0, units="secs"))
     gettextf("%.0f", sec)
   }
-  
+ 
   data <- dbGetQuery(con2, paste("
-SELECT 
-data.ts,
-data.familyid,
-data.paramcd,
-data.value,
-data.validated
-FROM 
-public.data
-WHERE 
-data.ts >= '", startDate,"' AND 
-data.ts < '", endDate, "';", sep = ""))
+SELECT
+ts,
+familyid,
+paramcd,
+value,
+validated
+FROM \"",
+date, "\"", sep = "")) 
   
   metadata <- dbGetQuery(con2, paste("SELECT * FROM  meta_station"))
   descript <- dbGetQuery(con2, paste("SELECT * FROM  meta_param"))
@@ -139,7 +146,7 @@ data.ts < '", endDate, "';", sep = ""))
   
   
   # use verbose = TRUE to get more info on nc creation
-  out <- nc_create(paste("out/", startDate, ".nc", sep = ""), vars = c(list(timeVar), parameterVars, validatedVars, descriptorVars, metadataVars))
+  out <- nc_create(paste("tmp/", date, ".nc", sep = ""), vars = c(list(timeVar), parameterVars, validatedVars, descriptorVars, metadataVars))
   
   ncvar_put(out, "time", times)
   
@@ -167,6 +174,13 @@ data.ts < '", endDate, "';", sep = ""))
   cc <- lapply(names(meta.pad), putStationMetadata)
   
   nc_close(out)
+  
+    system(paste("nccopy -d 9 tmp/",
+                date,
+                ".nc nc/",
+                date,".nc", sep = ""));
+
+
   
 }
 

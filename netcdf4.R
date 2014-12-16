@@ -1,3 +1,13 @@
+require(RPostgreSQL)
+require(doParallel)
+require(plyr)
+require(reshape2)
+require(lubridate)
+require(ncdf4)	
+require(data.table)
+drv2 <- dbDriver("PostgreSQL")
+con2 <- dbConnect(drv2, dbname = "postgres", user = "postgres", host = "localhost", password = "usgs")
+
 build.ncdf <- function(date){
   
   debugMode = FALSE;
@@ -12,13 +22,13 @@ build.ncdf <- function(date){
   
 data <- dbGetQuery(con2, paste("
 SELECT 
-data.ts,
-data.familyid,
-data.paramcd,
-data.value,
-data.validated
-FROM '",
-date, "'" sep = "")
+ts,
+familyid,
+paramcd,
+value,
+validated
+FROM \"",
+date, "\"", sep = ""))
   
   metadata <- data.table(dbGetQuery(con2, paste("SELECT * FROM  meta_station")))
   descript <- data.table(dbGetQuery(con2, paste("SELECT * FROM  meta_param")))
