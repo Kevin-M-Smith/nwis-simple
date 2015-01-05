@@ -2,7 +2,7 @@ db:
  host : localhost
  name : postgres
  user : postgres
- pass : uses
+ pass : usgs
 
 time:
  midnight.offset.standard : -06:00

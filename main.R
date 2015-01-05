@@ -26,6 +26,8 @@ closeCluster <- function(){
 getDay <- function(sites, date, params, offset){
   cat("===========================================\n")
   cat(paste("Building Table ::", date, "\n"))
+  
+  cc <- dbGetQuery(con, paste("CREATE TABLE IF NOT EXISTS \"", date, "\"(ts timestamp with time zone NOT NULL, seriesId text NOT NULL, familyId text, value numeric, paramcd text, validated integer, imported timestamp with time zone, updated timestamp with time zone);", sep = ""))
   cat(paste("Downloading data from",
             nrow(sites), "sites...\n"))
 
@@ -96,7 +98,7 @@ config <- yaml.load_file("config.yaml")
 
 setupCluster()
 
-yesterday = daysAgo(10)
+yesterday = daysAgo(31)
 
 getDay(sites = sites, 
        date = yesterday, 
