@@ -105,4 +105,4 @@ getDay(sites = sites,
 
 source("netcdf4.2.R")
 
-build.ncdf(yesterday)
+#build.ncdf(yesterday)
